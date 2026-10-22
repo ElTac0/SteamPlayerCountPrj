@@ -1,0 +1,8 @@
+services:
+  steamgameproject:
+    build:
+      context: /volume1/docker/steamgameproject
+    container_name: SteamGameProject
+    volumes:
+      - /volume1/docker/steamgameproject/data:/data
+    restart: unless-stopped
