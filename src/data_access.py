@@ -1,4 +1,3 @@
-import requests
 from getjson import *
 import time
 
@@ -7,6 +6,47 @@ CURRENT_PLAYERS = (
     "https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/"
 )
 APPDETAILS = "https://store.steampowered.com/api/appdetails"
+MOST_PLAYED = "https://api.steampowered.com/ISteamChartsService/GetMostPlayedGames/v1/"
+FEATURED = "https://store.steampowered.com/api/featuredcategories"
+
+def fetchMostPlayed(session):
+    # top ~100 by current players. No names in this response.
+    data = getJson(session, MOST_PLAYED)
+    if not data:
+        return {}
+    ranks = data.get("response", {}).get("ranks", [])
+    return {row["appid"]: None for row in ranks if "appid" in row}
+
+def fetchSteamSpyTop(session):
+    # top 100 by players in the last 2 weeks, with names
+    data = getJson(session, STEAMSPYGAMES, params={"request": "top100in2weeks"})
+    games = {}
+    for appid, info in (data or {}).items():
+        try:
+            games[int(appid)] = (info or {}).get("name")
+        except (TypeError, ValueError):
+            continue
+    return games
+
+def fetchFeatured(session):
+    # current top sellers + new releases, with names
+    data = getJson(session, FEATURED, params={"cc": "us", "l": "en"})
+    games = {}
+    if not data:
+        return games
+    for section in ("top_sellers", "new_releases"):
+        for item in data.get(section, {}).get("items", []):
+            if item.get("id"):
+                games[item["id"]] = item.get("name")
+    return games
+
+def fetchAppName(session, appid):
+    # single lookup, only used for games that came in without a name
+    data = getJson(session, APPDETAILS, params={"appids": appid})
+    entry = (data or {}).get(str(appid), {})
+    if not entry.get("success"):
+        return None
+    return (entry.get("data") or {}).get("name")
 
 def fetchGames(session, pages):
     games = {}
@@ -63,7 +103,7 @@ def fetchPrices(session, appids):
 def saveGames(conn, games):
     conn.executemany(
         "INSERT INTO Games (appid, Title) VALUES (?, ?) "
-        "ON CONFLICT(appid) DO UPDATE SET Title=excluded.Title",
+        "ON CONFLICT(appid) DO UPDATE SET Title=COALESCE(excluded.Title, Games.Title)",
         list(games.items())
     )
     conn.commit()

@@ -1,7 +1,7 @@
 import os
 import sqlite3
 
-path = "Data/steam.db"
+path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "steam.db")
 
 def initDB():
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -9,7 +9,8 @@ def initDB():
     cur = conn.cursor()
     cur.execute("""CREATE TABLE IF NOT EXISTS Games(
         appid INTEGER PRIMARY KEY,
-        Title TEXT)""")
+        title TEXT,
+        is_free INTEGER)""")
     
     cur.execute("""CREATE TABLE IF NOT EXISTS PlayerCounts(
         time_snapshot TEXT,

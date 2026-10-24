@@ -4,5 +4,5 @@ services:
       context: /volume1/docker/steamgameproject
     container_name: SteamGameProject
     volumes:
-      - /volume1/docker/steamgameproject/data:/data
+      - /volume1/docker/steamgameproject/data:/app/data
     restart: unless-stopped
